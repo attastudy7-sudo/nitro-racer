@@ -1,0 +1,16 @@
+{
+  "name": "nitro-type-racer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Real-time multiplayer typing racing with vehicles, garage and server-authoritative scoring",
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node server/selftest.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

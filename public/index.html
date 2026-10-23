@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nitro Racer — Multiplayer Typing Races</title>
+<meta name="description" content="Race real people at the keyboard. Pick a vehicle, outtype the field, earn coins and upgrade your garage.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%23ff4f81%27/%3E%3Cpath d=%27M6 20l5-8h14l-3 8z%27 fill=%27%23fff%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="bgfx" aria-hidden="true"></div>
+
+<header id="top" hidden>
+  <a class="logo" href="#home" data-nav="home"><i></i>NITRO<b>RACER</b></a>
+  <nav>
+    <button data-nav="home">Race</button>
+    <button data-nav="garage">Garage</button>
+    <button data-nav="board">Leaderboard</button>
+  </nav>
+  <span class="grow"></span>
+  <span id="ping" class="ping" title="Latency to server">— ms</span>
+  <button id="mute" class="icon" aria-label="Toggle sound" title="Sound">🔊</button>
+  <div class="chip" id="chip">
+    <div class="lvl" id="chipLvl">1</div>
+    <div class="who"><b id="chipName">—</b><div class="xpbar"><i id="chipXp"></i></div></div>
+    <div class="coins"><i class="coin"></i><b id="chipCoins">0</b></div>
+  </div>
+</header>
+
+<div id="conn" class="conn" hidden>Reconnecting to server…</div>
+
+<main id="app">
+  <!-- LOGIN -->
+  <section id="s-login" class="screen">
+    <div class="hero">
+      <h1>Type fast.<br><span>Drive faster.</span></h1>
+      <p>Real-time typing races against real people. Every correct word floors the pedal. Earn coins, level up, and build a garage of vehicles.</p>
+      <form id="loginForm" autocomplete="off">
+        <input id="nameIn" maxlength="16" placeholder="Choose a racer name" aria-label="Racer name" required>
+        <button class="btn primary big" type="submit">Start racing</button>
+      </form>
+      <div class="err" id="loginErr" role="alert"></div>
+      <div class="fine">No email. No password. Your browser keeps a secret key to your account.</div>
+    </div>
+    <div class="parade" id="parade" aria-hidden="true"></div>
+  </section>
+
+  <!-- HOME -->
+  <section id="s-home" class="screen" hidden>
+    <div class="grid2">
+      <div class="panel play">
+        <h2>Pick your race</h2>
+        <div class="seg" id="modeSeg" role="tablist">
+          <button class="on" data-mode="quote">Quotes</button>
+          <button data-mode="words">Words</button>
+          <button data-mode="code">Code</button>
+        </div>
+        <button class="btn primary huge" id="quick">Quick race <kbd>Enter</kbd></button>
+        <div class="or">or race your friends</div>
+        <div class="row">
+          <button class="btn" id="createRoom">Create private room</button>
+          <form id="joinForm" class="join"><input id="codeIn" maxlength="4" placeholder="CODE" aria-label="Room code"><button class="btn">Join</button></form>
+        </div>
+        <div class="err" id="homeErr" role="alert"></div>
+      </div>
+      <div class="panel garagecard">
+        <h2>Your ride</h2>
+        <div class="showroom" id="homeCar"></div>
+        <button class="btn" data-nav="garage">Open garage →</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Your stats</h2>
+      <div class="stats" id="statRow"></div>
+      <canvas id="histChart" class="chart" height="150"></canvas>
+    </div>
+  </section>
+
+  <!-- LOBBY -->
+  <section id="s-lobby" class="screen" hidden>
+    <div class="panel lobby">
+      <div class="lobbyTop">
+        <div><h2 id="lobbyTitle">Finding racers…</h2><div class="fine" id="lobbySub"></div></div>
+        <div class="code" id="roomCode" hidden></div>
+      </div>
+      <div class="roster" id="roster"></div>
+      <div class="row end">
+        <button class="btn" id="leaveLobby">Leave</button>
+        <button class="btn primary" id="startRoom" hidden>Start race</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RACE -->
+  <section id="s-race" class="screen racecol" hidden>
+    <div class="trackwrap"><canvas id="track"></canvas><div class="biome" id="biome"></div></div>
+    <div class="hud">
+      <div class="gauge"><canvas id="gauge"></canvas></div>
+      <div class="hudstats">
+        <div><small>Position</small><b id="hPlace">—</b></div>
+        <div><small>Accuracy</small><b id="hAcc">100%</b></div>
+        <div><small>Time</small><b id="hTime">0.0</b></div>
+        <div><small>Progress</small><b id="hProg">0%</b></div>
+        <div class="nitro"><small>Nitro streak</small><span class="nbar"><i id="nBar"></i></span></div>
+      </div>
+    </div>
+    <div class="typing" id="typing" tabindex="-1">
+      <div id="banner" class="banner">Get ready</div>
+      <div id="textBox" class="textbox" aria-label="Text to type"><div id="caret"></div><div id="text"></div></div>
+      <input id="hidden" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Type here" disabled>
+      <div class="fine center" id="srcLine"></div>
+    </div>
+    <div class="typing resultbar" id="result" hidden>
+      <div class="resTop">
+        <div><div id="rPlace" class="rplace">1st</div><div class="fine" id="rSub"></div></div>
+        <div class="rbig"><span id="rWpm">0</span><small>WPM</small><span id="rPB" class="badge" hidden>NEW PB</span></div>
+        <div class="rgrid" id="rStats"></div>
+      </div>
+      <div id="rFlag" class="flag" hidden></div>
+      <div class="row end"><button class="btn" id="rHome">Home</button><button class="btn primary" id="rAgain">Race again</button></div>
+    </div>
+    <div class="row end"><button class="btn" id="quitRace">Leave race (Esc)</button></div>
+  </section>
+
+  <!-- GARAGE -->
+  <section id="s-garage" class="screen" hidden>
+    <div class="grid2 garage">
+      <div class="panel stage">
+        <div class="showroom big" id="stageCar"></div>
+        <h2 id="stageName"></h2><div class="fine" id="stageTag"></div>
+        <div class="paints" id="paints" role="radiogroup" aria-label="Paint"></div>
+      </div>
+      <div class="cars" id="cars"></div>
+    </div>
+  </section>
+
+  <!-- LEADERBOARD -->
+  <section id="s-board" class="screen" hidden>
+    <div class="panel">
+      <div class="seg" id="boardSeg"><button class="on" data-k="speed">Fastest</button><button data-k="wins">Most wins</button></div>
+      <table class="lb" id="lbTable"></table>
+    </div>
+  </section>
+</main>
+
+
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="vehicles.js"></script>
+<script src="render.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
